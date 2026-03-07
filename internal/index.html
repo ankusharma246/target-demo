@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Internal - Target Demo</title>
+
+  <!-- Load Adobe Target (shared) -->
+  <script src="../js/target-init.js"></script>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Internal Page — Adobe Target Demo</h1>
+    <p>This page is used to test activities targeted to /internal/.</p>
+
+    <div class="card">
+      <button class="btn" id="internal-cta">Internal CTA</button>
+    </div>
+
+    <nav class="nav">
+      <a href="../index.html">Back to Home</a>
+    </nav>
+
+    <div id="debug" class="debug">Target status: unknown</div>
+  </main>
+
+  <script>
+    function isTargetLoaded(){
+      return !!(window.adobe && window.adobe.target && !window.adobe.target._placeholder);
+    }
+    function updateDebug(text){ document.getElementById('debug').innerText = 'Target status: ' + text; }
+
+    function requestAndApplyOffer(mbox){
+      if(!isTargetLoaded()){
+        updateDebug('at.js not loaded');
+        return;
+      }
+      window.adobe.target.getOffer({
+        mbox: mbox,
+        success: function(offer){
+          window.adobe.target.applyOffer({ mbox: mbox, offer: offer });
+          updateDebug('Offer applied for ' + mbox);
+        },
+        error: function(err){
+          updateDebug('getOffer error: ' + (err && err.message ? err.message : JSON.stringify(err)));
+        }
+      });
+    }
+
+    document.getElementById('internal-cta').addEventListener('click', function(e){
+      e.preventDefault();
+      requestAndApplyOffer('internal-cta');
+    });
+  </script>
+</body>
+</html>

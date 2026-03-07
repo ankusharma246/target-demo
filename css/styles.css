@@ -1,0 +1,6 @@
+body { font-family: Arial, sans-serif; margin:0; padding:32px; background:#f4f6f9; }
+.container { max-width:900px; margin:0 auto; }
+.card { background:white; padding:18px; border-radius:8px; box-shadow:0 6px 18px rgba(18, 38, 63, 0.06); margin:18px 0; }
+.btn { background:#0066ff; color:white; padding:10px 16px; border-radius:6px; border:none; cursor:pointer; }
+.nav a { color:#0066ff; text-decoration:none; }
+.debug{ margin-top:12px; font-size:0.95rem; color:#333; }
