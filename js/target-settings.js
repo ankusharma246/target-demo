@@ -5,3 +5,5 @@ window.targetGlobalSettings = window.targetGlobalSettings || {};
 window.targetGlobalSettings.cookieDomain = window.location.hostname;
 window.targetGlobalSettings.secureOnly = window.location.protocol === 'https:';
 window.targetGlobalSettings.enabled = true;
+window.targetGlobalSettings.serverDomain = 'mboxedge1.tt-qe5.omtrdc.net';
+window.targetGlobalSettings.overrideMboxEdgeServer = false;
