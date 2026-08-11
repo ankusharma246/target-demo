@@ -45,10 +45,10 @@
   </section>
 
   <section class="card">
-    <h2>Identity &amp; Fetch</h2>
-    <label>Email (AEP identity, namespace <code>email</code>)</label>
+    <h2>Identity and Fetch</h2>
+    <label for="email">Email (AEP identity, namespace <code>email</code>)</label>
     <input id="email" value="mia.roy@example.com" />
-    <label>Pin ECID (optional — leave blank to use the cookie)</label>
+    <label for="ecid">Pin ECID (optional — leave blank to use the cookie)</label>
     <input id="ecid" placeholder="e.g. 91867416263372490303060865060433145198" />
     <div class="btns">
       <button class="primary" onclick="identifyAndFetch()">Identify + Fetch (render)</button>
@@ -75,7 +75,7 @@
   const SURFACE       = "web://" + location.host + location.pathname;
 
   document.getElementById("cfg").textContent =
-    `datastream=${DATASTREAM_ID}  |  org=${ORG_ID}  |  surface=${SURFACE}`;
+    "datastream=" + DATASTREAM_ID + "  |  org=" + ORG_ID + "  |  surface=" + SURFACE;
 
   !function(n,o){o.forEach(function(o){n[o]||((n.__alloyNS=n.__alloyNS||[]).push(o),
     n[o]=function(){var u=arguments;return new Promise(function(i,l){n[o].q.push([i,l,u])})},n[o].q=[])})}
@@ -145,6 +145,6 @@
 
   window.addEventListener("load", () => setTimeout(identifyAndFetch, 300));
 </script>
-<script src="https://cdn1.adoberesources.net/alloy/2.x/alloy.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/@adobe/alloy@2/dist/alloy.min.js" async></script>
 </body>
 </html>
