@@ -1,64 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Home - Target Demo</title>
-
-  <!-- Set targetGlobalSettings BEFORE at.js loads -->
-  <script src="js/target-settings.js"></script>
-  <!-- Load Adobe Target (shared) -->
-  <script src="js/target-init.js"></script>
-  <link rel="stylesheet" href="css/styles.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AEP + Target WebSDK Validation</title>
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --line:#2a2f3a; --fg:#e6e9ef; --muted:#9aa4b2; --accent:#4c8dff; --ok:#37c871; --bad:#ff5d5d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); background:var(--card); }
+  header h1 { margin:0; font-size:16px; }
+  header .cfg { color:var(--muted); font-size:12px; margin-top:4px; font-family:ui-monospace,Menlo,monospace; }
+  main { max-width:1100px; margin:0 auto; padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
+  .card h2 { margin:0 0 12px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  #hero { grid-column:1 / -1; text-align:center; padding:40px 20px; border:1px dashed var(--line); border-radius:10px; background:linear-gradient(180deg,#161a22,#12151b); }
+  #hero-headline { font-size:28px; margin:0 0 8px; }
+  #hero-sub { color:var(--muted); margin:0; }
+  #index-el-16 { display:inline-block; margin-top:16px; padding:10px 18px; border-radius:8px; background:#1d2430; border:1px solid var(--line); }
+  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  input { width:100%; padding:9px 10px; background:#0f131a; border:1px solid var(--line); border-radius:7px; color:var(--fg); font-family:ui-monospace,monospace; font-size:13px; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  button { cursor:pointer; border:1px solid var(--line); background:#1d2430; color:var(--fg); padding:9px 12px; border-radius:7px; font-size:13px; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:hover { filter:brightness(1.1); }
+  pre { margin:0; white-space:pre-wrap; word-break:break-word; font:12px/1.5 ui-monospace,Menlo,monospace; color:#cdd6e3; max-height:340px; overflow:auto; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .ok { color:var(--ok); border-color:var(--ok); } .bad { color:var(--bad); border-color:var(--bad); }
+  code { font-family:ui-monospace,monospace; color:#a9c8ff; }
+</style>
 </head>
 <body>
-  <main class="container">
-    <h1>Home — Adobe Target Demo</h1>
-    <p>This is the public demo site to test Adobe Target activities.</p>
+<header>
+  <h1>AEP + Target — WebSDK Validation Harness</h1>
+  <div class="cfg" id="cfg"></div>
+</header>
 
-    <div class="card">
-      <button class="btn" id="home-cta">Primary CTA</button>
-      <p class="note">Click the CTA to trigger demo actions / mbox calls.</p>
+<main>
+  <section id="hero">
+    <h2 id="hero-headline">Welcome, guest 👋</h2>
+    <p id="hero-sub">Default content — a Target activity should replace this.</p>
+    <div id="index-el-16">Imagine it. (default offer slot)</div>
+  </section>
+
+  <section class="card">
+    <h2>Identity &amp; Fetch</h2>
+    <label>Email (AEP identity, namespace <code>email</code>)</label>
+    <input id="email" value="mia.roy@example.com" />
+    <label>Pin ECID (optional — leave blank to use the cookie)</label>
+    <input id="ecid" placeholder="e.g. 91867416263372490303060865060433145198" />
+    <div class="btns">
+      <button class="primary" onclick="identifyAndFetch()">Identify + Fetch (render)</button>
+      <button onclick="fetchAnon()">Fetch anonymous</button>
+      <button onclick="showEcid()">Show ECID</button>
+      <button onclick="resetIdentity()">Reset identity</button>
     </div>
+    <div class="row" style="margin-top:12px;">
+      <span class="pill" id="ecidPill">ECID: —</span>
+      <span class="pill" id="decPill">decisions: —</span>
+    </div>
+  </section>
 
-    <nav class="nav">
-      <a href="./internal/">Go to Internal Page</a>
-    </nav>
+  <section class="card">
+    <h2>Last response</h2>
+    <pre id="out">Load the page, then click "Identify + Fetch".</pre>
+  </section>
+</main>
 
-    <div id="debug" class="debug">Target status: unknown</div>
-  </main>
+<script>
+  const DATASTREAM_ID = "80f974e4-ca8d-41f4-aef7-161317dec512";
+  const ORG_ID        = "3E3EFB6D56570A277F000101@AdobeOrg";
+  const EDGE_DOMAIN   = "ags041.data.adobedc.net";
+  const SURFACE       = "web://" + location.host + location.pathname;
 
-  <script>
-    function isTargetLoaded(){
-      return !!(window.adobe && window.adobe.target && !window.adobe.target._placeholder);
-    }
-    function updateDebug(text){ document.getElementById('debug').innerText = 'Target status: ' + text; }
+  document.getElementById("cfg").textContent =
+    `datastream=${DATASTREAM_ID}  |  org=${ORG_ID}  |  surface=${SURFACE}`;
 
-    function requestAndApplyOffer(mbox){
-      if(!isTargetLoaded()){
-        updateDebug('at.js not loaded');
-        return;
-      }
-      try{
-        window.adobe.target.getOffer({
-          mbox: mbox,
-          success: function(offer){
-            window.adobe.target.applyOffer({ mbox: mbox, offer: offer });
-            updateDebug('Offer applied for ' + mbox);
-          },
-          error: function(err){
-            updateDebug('getOffer error: ' + (err && err.message ? err.message : JSON.stringify(err)));
-          }
-        });
-      } catch(e){
-        updateDebug('Exception: ' + e.message);
-      }
-    }
+  !function(n,o){o.forEach(function(o){n[o]||((n.__alloyNS=n.__alloyNS||[]).push(o),
+    n[o]=function(){var u=arguments;return new Promise(function(i,l){n[o].q.push([i,l,u])})},n[o].q=[])})}
+    (window,["alloy"]);
 
-    document.getElementById('home-cta').addEventListener('click', function(e){
-      e.preventDefault();
-      requestAndApplyOffer('homepage-cta');
+  alloy("configure", {
+    datastreamId: DATASTREAM_ID,
+    orgId: ORG_ID,
+    edgeDomain: EDGE_DOMAIN,
+    debugEnabled: true,
+    defaultConsent: "in"
+  });
+
+  const out = document.getElementById("out");
+  const log = (x) => out.textContent = (typeof x === "string" ? x : JSON.stringify(x, null, 2));
+
+  function idMap() {
+    const email = document.getElementById("email").value.trim();
+    const ecid  = document.getElementById("ecid").value.trim();
+    const map = {};
+    if (ecid)  map.ECID  = [{ id: ecid,  authenticatedState: "ambiguous",     primary: true  }];
+    if (email) map.email = [{ id: email, authenticatedState: "authenticated", primary: !ecid }];
+    return map;
+  }
+
+  function summarize(r) {
+    const props = r && r.propositions ? r.propositions : [];
+    document.getElementById("decPill").textContent = "decisions: " + props.length;
+    document.getElementById("decPill").className = "pill " + (props.length ? "ok" : "bad");
+    log({ requestId: r && r.requestId, propositionsCount: props.length, propositions: props });
+    showEcid();
+  }
+
+  function identifyAndFetch() {
+    alloy("sendEvent", {
+      renderDecisions: true,
+      xdm: { eventType: "decisioning.propositionFetch", identityMap: idMap() },
+      decisionScopes: ["__view__"],
+      personalization: { surfaces: [SURFACE] }
+    }).then(summarize).catch(e => log("ERROR: " + e));
+  }
+
+  function fetchAnon() {
+    alloy("sendEvent", {
+      renderDecisions: true,
+      xdm: { eventType: "decisioning.propositionFetch" },
+      decisionScopes: ["__view__"],
+      personalization: { surfaces: [SURFACE] }
+    }).then(summarize).catch(e => log("ERROR: " + e));
+  }
+
+  function showEcid() {
+    alloy("getIdentity", { namespaces: ["ECID"] }).then(r => {
+      const ecid = r && r.identity && r.identity.ECID;
+      document.getElementById("ecidPill").textContent = "ECID: " + (ecid || "—");
+    }).catch(()=>{});
+  }
+
+  function resetIdentity() {
+    document.cookie.split(";").forEach(c => {
+      const n = c.split("=")[0].trim();
+      if (n.indexOf("kndctr_") === 0) document.cookie = n + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
     });
-  </script>
+    log("Identity cookies cleared. Reload the page for a fresh ECID.");
+    document.getElementById("ecidPill").textContent = "ECID: —";
+  }
+
+  window.addEventListener("load", () => setTimeout(identifyAndFetch, 300));
+</script>
+<script src="https://cdn1.adoberesources.net/alloy/2.x/alloy.min.js" async></script>
 </body>
 </html>
