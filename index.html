@@ -49,21 +49,18 @@
   <!-- ====== IDENTITY + FETCH CONTROLS ====== -->
   <section class="card">
     <h2>Identity &amp; Fetch</h2>
-    <label>Email (AEP identity, namespace <code>email</code>)</label>
-    <input id="email" value="" placeholder="enter ONE email, e.g. targetTest@example.com" />
-    <label>Pin ECID (optional — leave blank to use the cookie)</label>
-    <input id="ecid" placeholder="e.g. 91867416263372490303060865060433145198" />
-    <label for="authstate">Authenticated state</label>
-    <select id="authstate" style="width:100%;padding:9px 10px;background:#0f131a;border:1px solid var(--line);border-radius:7px;color:var(--fg);">
-      <option value="authenticated" selected>authenticated</option>
-      <option value="ambiguous">ambiguous</option>
-      <option value="loggedOut">loggedOut</option>
-    </select>
+    <p style="color:var(--muted);font-size:12px;margin:0 0 6px;">
+      Matching is driven by the <b>ECID</b> — that's the identity the Target
+      <code>activationpull</code> projection is keyed by. Pin a member ECID to match.
+    </p>
+    <label>Pin ECID (the identity that matches — edit to test another)</label>
+    <input id="ecid" value="91867416263372490303060865060433145198"
+           placeholder="e.g. 91867416263372490303060865060433145198" />
+    <label>Email (optional — sent only as a data attribute, does NOT drive matching)</label>
+    <input id="email" value="" placeholder="optional, e.g. targetTest@example.com" />
     <div class="btns">
-      <button class="primary" onclick="fetchByEmail()">Fetch — EMAIL match</button>
-      <button onclick="identifyAndFetch()">Fetch — email + ECID</button>
-      <button onclick="fetchByEcid()">Fetch — ECID only</button>
-      <button onclick="fetchAnon()">Fetch anonymous</button>
+      <button class="primary" onclick="fetchByEcid()">Fetch — ECID</button>
+      <button onclick="fetchAnon()">Fetch anonymous (cookie ECID)</button>
       <button onclick="showEcid()">Show ECID</button>
       <button onclick="resetIdentity()">Reset identity</button>
     </div>
@@ -76,7 +73,7 @@
   <!-- ====== DEBUG OUTPUT ====== -->
   <section class="card">
     <h2>Last response</h2>
-    <pre id="out">Load the page, then click "Identify + Fetch".</pre>
+    <pre id="out">Pin a member ECID (e.g. 91867416263372490303060865060433145198), then click "Fetch — ECID".</pre>
   </section>
 </main>
 
@@ -108,16 +105,6 @@
   const out = document.getElementById("out");
   const log = (x) => out.textContent = (typeof x === "string" ? x : JSON.stringify(x, null, 2));
 
-  function idMap() {
-    const email = document.getElementById("email").value.trim();
-    const ecid  = document.getElementById("ecid").value.trim();
-    const map = {};
-    const auth = document.getElementById("authstate").value;
-    if (ecid)  map.ECID  = [{ id: ecid,  authenticatedState: "ambiguous", primary: false }];
-    if (email) map.email = [{ id: email, authenticatedState: auth,        primary: true  }];
-    return map;
-  }
-
   function summarize(r) {
     const props = r && r.propositions ? r.propositions : [];
     document.getElementById("decPill").textContent = "decisions: " + props.length;
@@ -126,22 +113,9 @@
     showEcid();
   }
 
-  function identifyAndFetch() {
-    alloy("sendEvent", {
-      renderDecisions: true,   // auto-apply VEC/__view__ DOM changes to the page
-      xdm: { eventType: "decisioning.propositionFetch", identityMap: idMap() },
-      decisionScopes: ["__view__"],
-      personalization: { surfaces: [SURFACE] }
-    }).then(summarize).catch(e => log("ERROR: " + e));
-  }
-
-  function fetchAnon() {
-    runFetch({});
-  }
-
   // Shared fetch — pass an explicit identityMap and optional extra xdm (e.g. profile attributes)
   function runFetch(identityMap, extraXdm) {
-    const xdm = Object.assign({ eventType: "decisioning.propositionFetch", identityMap }, extraXdm || {});
+    const xdm = { eventType: "decisioning.propositionFetch", identityMap, ...(extraXdm || {}) };
     log("Sending xdm: " + JSON.stringify(xdm));
     alloy("sendEvent", {
       renderDecisions: true,
@@ -151,23 +125,21 @@
     }).then(summarize).catch(e => log("ERROR: " + e));
   }
 
-  // EMAIL match — send ONLY the email identity (primary) so the edge resolves the profile by email,
-  // AND stamp _ags041.customerEmail = <email> so the profile qualifies a customerEmail-based audience.
-  function fetchByEmail() {
+  // ECID match — the ONLY identity that resolves the activationpull projection.
+  // Pin a materialized member ECID (e.g. 91867416...) to get a decision.
+  // The email, if entered, is sent ONLY as a data attribute (_ags041.customerEmail)
+  // and does NOT drive matching (Target has no email customerId in this datastream).
+  function fetchByEcid() {
+    const ecid  = document.getElementById("ecid").value.trim();
     const email = document.getElementById("email").value.trim();
-    const auth  = document.getElementById("authstate").value;
-    if (!email) { log("Enter an email first."); return; }
-    runFetch(
-      { email: [{ id: email, authenticatedState: auth, primary: true }] },
-      { _ags041: { customerEmail: email } }
-    );
+    if (!ecid) { log("Pin an ECID first — that's the identity the projection is keyed by."); return; }
+    const extra = email ? { _ags041: { customerEmail: email } } : undefined;
+    runFetch({ ECID: [{ id: ecid, authenticatedState: "ambiguous", primary: true }] }, extra);
   }
 
-  // ECID-only match
-  function fetchByEcid() {
-    const ecid = document.getElementById("ecid").value.trim();
-    if (!ecid) { log("Enter an ECID to pin first."); return; }
-    runFetch({ ECID: [{ id: ecid, authenticatedState: "ambiguous", primary: true }] });
+  // Fetch with the browser's cookie ECID (no pin). Matches only if that ECID is a member.
+  function fetchAnon() {
+    runFetch({});
   }
 
   function showEcid() {
