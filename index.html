@@ -3,91 +3,407 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AEP + Target WebSDK Validation</title>
+<title>Adobe Target — Personalize every experience</title>
 <style>
-  :root { --bg:#0f1115; --card:#171a21; --line:#2a2f3a; --fg:#e6e9ef; --muted:#9aa4b2; --accent:#4c8dff; --ok:#37c871; --bad:#ff5d5d; }
+  :root {
+    --blue: #1473E6; --blue-hover: #0D66D0; --red: #EB1000;
+    --w:#fff; --g75:#fafafa; --g100:#f5f5f5; --g200:#e9e9e9; --g300:#d6d6d6;
+    --g400:#b3b3b3; --g500:#909090; --g600:#6e6e6e; --g700:#4b4b4b; --g800:#2c2c2c; --g900:#161616;
+    --green:#2D9D78; --bad:#D31510;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.05);
+    --shadow-md:0 6px 20px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg:0 20px 50px rgba(0,0,0,.16);
+    --font:"adobe-clean",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --mono:"Source Code Pro",ui-monospace,"SF Mono",Menlo,monospace;
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg); }
-  header { padding:18px 24px; border-bottom:1px solid var(--line); background:var(--card); }
-  header h1 { margin:0; font-size:16px; }
-  header .cfg { color:var(--muted); font-size:12px; margin-top:4px; font-family:ui-monospace,Menlo,monospace; }
-  main { max-width:1100px; margin:0 auto; padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
-  .card h2 { margin:0 0 12px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
-  /* ---- The element Target activities will personalize ---- */
-  #hero { grid-column:1 / -1; text-align:center; padding:40px 20px; border:1px dashed var(--line); border-radius:10px; background:linear-gradient(180deg,#161a22,#12151b); }
-  #hero-headline { font-size:28px; margin:0 0 8px; }
-  #hero-sub { color:var(--muted); margin:0; }
-  #index-el-16 { display:inline-block; margin-top:16px; padding:10px 18px; border-radius:8px; background:#1d2430; border:1px solid var(--line); }
-  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
-  input { width:100%; padding:9px 10px; background:#0f131a; border:1px solid var(--line); border-radius:7px; color:var(--fg); font-family:ui-monospace,monospace; font-size:13px; }
-  .btns { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
-  button { cursor:pointer; border:1px solid var(--line); background:#1d2430; color:var(--fg); padding:9px 12px; border-radius:7px; font-size:13px; }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-  button:hover { filter:brightness(1.1); }
-  pre { margin:0; white-space:pre-wrap; word-break:break-word; font:12px/1.5 ui-monospace,Menlo,monospace; color:#cdd6e3; max-height:340px; overflow:auto; }
-  .row { display:flex; gap:8px; align-items:center; }
-  .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
-  .ok { color:var(--ok); border-color:var(--ok); } .bad { color:var(--bad); border-color:var(--bad); }
-  code { font-family:ui-monospace,monospace; color:#a9c8ff; }
+  body { margin:0; font-family:var(--font); color:var(--g800); background:var(--w); -webkit-font-smoothing:antialiased; line-height:1.55; }
+  a { color:inherit; text-decoration:none; }
+  h1,h2,h3 { letter-spacing:-.02em; color:var(--g900); }
+  .wrap { max-width:1160px; margin:0 auto; padding:0 24px; }
+
+  /* ---- Nav ---- */
+  nav {
+    position:sticky; top:0; z-index:50; background:rgba(255,255,255,.85);
+    backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid var(--g200);
+  }
+  nav .bar { display:flex; align-items:center; gap:28px; height:64px; }
+  nav .brand { display:flex; align-items:center; gap:10px; font-weight:700; color:var(--g900); }
+  nav .brand svg { width:26px; height:23px; }
+  nav .links { display:flex; gap:26px; font-size:14px; color:var(--g700); font-weight:500; }
+  nav .links a:hover { color:var(--g900); }
+  nav .spacer { flex:1; }
+  nav .cta { display:flex; gap:12px; align-items:center; }
+  @media (max-width:820px){ nav .links{ display:none; } }
+
+  .btn { cursor:pointer; font-family:var(--font); font-size:14px; font-weight:700; padding:9px 18px;
+    border-radius:999px; border:1px solid var(--g300); background:var(--w); color:var(--g800); transition:all .15s; white-space:nowrap; }
+  .btn:hover { background:var(--g100); border-color:var(--g400); }
+  .btn.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .btn.primary:hover { background:var(--blue-hover); border-color:var(--blue-hover); }
+  .btn.lg { padding:13px 26px; font-size:15px; }
+  .btn.ghost-light { background:transparent; color:#fff; border-color:rgba(255,255,255,.5); }
+  .btn.ghost-light:hover { background:rgba(255,255,255,.12); }
+
+  /* ---- Hero (personalization target) ---- */
+  .hero { position:relative; overflow:hidden; color:#fff;
+    background:linear-gradient(135deg,#1a0630 0%,#3d0b33 42%,#7a1512 100%); }
+  .hero::before { content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 78% 12%,rgba(255,90,60,.35),transparent 40%),
+               radial-gradient(circle at 12% 85%,rgba(90,60,220,.35),transparent 42%); }
+  .hero .wrap { position:relative; display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center;
+    padding-top:76px; padding-bottom:84px; }
+  @media (max-width:900px){ .hero .wrap{ grid-template-columns:1fr; gap:32px; padding-top:52px; padding-bottom:56px; } }
+  .hero .eyebrow { font-size:13px; letter-spacing:.14em; text-transform:uppercase; opacity:.8; margin:0 0 16px;
+    display:inline-flex; align-items:center; gap:8px; }
+  .hero .eyebrow::before { content:""; width:22px; height:2px; background:#fff; opacity:.6; }
+  #hero-headline { font-size:52px; line-height:1.05; font-weight:800; margin:0 0 18px; color:#fff; }
+  @media (max-width:900px){ #hero-headline{ font-size:38px; } }
+  #hero-sub { font-size:19px; opacity:.86; margin:0 0 28px; max-width:520px; }
+  .hero .actions { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  #index-el-16 { margin-top:22px; font-size:13px; opacity:.7; }
+
+  .hero .visual { position:relative; }
+  .hero .visual img { width:100%; border-radius:16px; box-shadow:var(--shadow-lg); display:block; }
+  .hero .float { position:absolute; background:#fff; color:var(--g800); border-radius:12px;
+    box-shadow:var(--shadow-lg); padding:14px 16px; font-size:13px; font-weight:600; display:flex; gap:10px; align-items:center; }
+  .hero .float .dot { width:10px; height:10px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px rgba(45,157,120,.18); }
+  .hero .float.one { top:22px; left:-18px; }
+  .hero .float.two { bottom:26px; right:-14px; }
+  @media (max-width:900px){ .hero .float{ display:none; } }
+
+  /* ---- Trusted strip ---- */
+  .trusted { border-bottom:1px solid var(--g200); background:var(--g75); }
+  .trusted .wrap { display:flex; align-items:center; gap:36px; flex-wrap:wrap; padding:22px 24px; }
+  .trusted span { font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--g500); font-weight:700; }
+  .trusted .names { display:flex; gap:34px; flex-wrap:wrap; color:var(--g500); font-weight:800; font-size:18px; opacity:.75; }
+
+  /* ---- Sections ---- */
+  section.pad { padding:84px 0; }
+  .section-head { max-width:680px; margin:0 auto 52px; text-align:center; }
+  .section-head .kicker { color:var(--blue); font-weight:800; font-size:13px; letter-spacing:.12em; text-transform:uppercase; margin:0 0 12px; }
+  .section-head h2 { font-size:38px; margin:0 0 14px; }
+  @media (max-width:900px){ .section-head h2{ font-size:30px; } }
+  .section-head p { font-size:18px; color:var(--g600); margin:0; }
+
+  .features { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  @media (max-width:900px){ .features{ grid-template-columns:1fr; } }
+  .feature { background:var(--w); border:1px solid var(--g200); border-radius:14px; overflow:hidden; box-shadow:var(--shadow-sm); transition:transform .18s, box-shadow .18s; }
+  .feature:hover { transform:translateY(-4px); box-shadow:var(--shadow-md); }
+  .feature img { width:100%; height:170px; object-fit:cover; display:block; }
+  .feature .body { padding:22px; }
+  .feature .ic { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    background:rgba(20,115,230,.1); color:var(--blue); margin:-42px 0 14px; position:relative; border:3px solid #fff; }
+  .feature h3 { font-size:19px; margin:0 0 8px; }
+  .feature p { margin:0; color:var(--g600); font-size:15px; }
+
+  /* ---- Stats band ---- */
+  .stats { background:var(--g900); color:#fff; }
+  .stats .wrap { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; padding:56px 24px; text-align:center; }
+  @media (max-width:760px){ .stats .wrap{ grid-template-columns:repeat(2,1fr); } }
+  .stats .n { font-size:42px; font-weight:800; color:#fff; letter-spacing:-.03em; }
+  .stats .l { color:var(--g400); font-size:14px; margin-top:6px; }
+
+  /* ---- Split showcase ---- */
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+  @media (max-width:900px){ .split{ grid-template-columns:1fr; gap:32px; } }
+  .split img { width:100%; border-radius:16px; box-shadow:var(--shadow-md); }
+  .split h2 { font-size:34px; margin:0 0 16px; }
+  .split p { font-size:17px; color:var(--g600); margin:0 0 18px; }
+  .split ul { margin:0; padding:0; list-style:none; }
+  .split li { display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; font-size:16px; color:var(--g700); }
+  .split li svg { flex:none; margin-top:2px; color:var(--green); }
+
+  /* ---- Console (validation harness) ---- */
+  .console { background:var(--g100); }
+  .cgrid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:900px){ .cgrid{ grid-template-columns:1fr; } }
+  .card { background:var(--w); border:1px solid var(--g200); border-radius:14px; padding:24px; box-shadow:var(--shadow-sm); }
+  .card h3 { font-size:17px; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+  .card .hint { margin:0 0 16px; font-size:13px; color:var(--g600); }
+  .card .hint b { color:var(--g800); }
+  label { display:block; font-size:12px; font-weight:700; color:var(--g700); margin:16px 0 6px; }
+  label:first-of-type { margin-top:0; }
+  label .sub { font-weight:400; color:var(--g500); }
+  input { width:100%; padding:11px 13px; font-family:var(--mono); font-size:13px; color:var(--g900);
+    background:var(--w); border:1px solid var(--g300); border-radius:8px; transition:border-color .15s, box-shadow .15s; }
+  input::placeholder { color:var(--g400); }
+  input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(20,115,230,.18); }
+  .btns { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+  .pills { display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; }
+  .pill { font-size:12px; font-weight:700; padding:5px 12px; border-radius:999px; border:1px solid var(--g300);
+    color:var(--g600); background:var(--g75); font-family:var(--mono); }
+  .pill.ok { color:var(--green); border-color:rgba(45,157,120,.4); background:rgba(45,157,120,.08); }
+  .pill.badv { color:var(--bad); border-color:rgba(211,21,16,.35); background:rgba(211,21,16,.06); }
+  pre { margin:0; white-space:pre-wrap; word-break:break-word; font-family:var(--mono); font-size:12px; line-height:1.55;
+    color:var(--g700); background:var(--g75); border:1px solid var(--g200); border-radius:8px; padding:14px; max-height:340px; overflow:auto; }
+  code { font-family:var(--mono); color:var(--blue); background:var(--g100); padding:1px 5px; border-radius:4px; font-size:12px; }
+  .env { font-size:12px; color:var(--g600); font-family:var(--mono); margin-top:14px; }
+
+  /* ---- Quote ---- */
+  .quote { text-align:center; }
+  .quote blockquote { font-size:26px; font-weight:600; color:var(--g900); max-width:820px; margin:0 auto 22px; line-height:1.4; }
+  .quote .who { color:var(--g600); font-size:15px; }
+
+  /* ---- CTA + Footer ---- */
+  .cta-band { background:linear-gradient(135deg,#1473E6,#0D66D0); color:#fff; text-align:center; }
+  .cta-band h2 { color:#fff; font-size:36px; margin:0 0 14px; }
+  .cta-band p { font-size:18px; opacity:.9; margin:0 0 28px; }
+  footer { background:var(--g900); color:var(--g400); padding:56px 0 32px; font-size:14px; }
+  footer .cols { display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:32px; margin-bottom:40px; }
+  @media (max-width:760px){ footer .cols{ grid-template-columns:1fr 1fr; } }
+  footer h4 { color:#fff; font-size:13px; text-transform:uppercase; letter-spacing:.1em; margin:0 0 16px; }
+  footer a { display:block; margin-bottom:10px; color:var(--g400); }
+  footer a:hover { color:#fff; }
+  footer .brand { display:flex; align-items:center; gap:10px; color:#fff; font-weight:700; margin-bottom:12px; }
+  footer .brand svg { width:24px; height:21px; }
+  footer .legal { border-top:1px solid #2c2c2c; padding-top:24px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; color:var(--g500); }
 </style>
+<script>
+  // Inline-SVG fallback so the page never shows a broken image if the CDN is unreachable.
+  function imgFallback(el, variant) {
+    el.onerror = null;
+    const grads = {
+      hero:    ["#2b0a3d", "#7a1512"],
+      ab:      ["#0D66D0", "#1473E6"],
+      ai:      ["#1a0630", "#3d0b33"],
+      profile: ["#3d0b33", "#7a1512"],
+      team:    ["#0D66D0", "#1473E6"]
+    };
+    const [c1, c2] = grads[variant] || ["#1473E6", "#0D66D0"];
+    const svg =
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500' preserveAspectRatio='xMidYMid slice'>" +
+        "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>" +
+          "<stop offset='0' stop-color='" + c1 + "'/><stop offset='1' stop-color='" + c2 + "'/>" +
+        "</linearGradient></defs>" +
+        "<rect width='800' height='500' fill='url(#g)'/>" +
+        "<g fill='#ffffff' fill-opacity='0.12'>" +
+          "<circle cx='650' cy='110' r='120'/>" +
+          "<rect x='90' y='300' width='60' height='120' rx='12'/>" +
+          "<rect x='170' y='250' width='60' height='170' rx='12'/>" +
+          "<rect x='250' y='200' width='60' height='220' rx='12'/>" +
+          "<rect x='330' y='140' width='60' height='280' rx='12'/>" +
+        "</g>" +
+        "<g stroke='#ffffff' stroke-opacity='0.28' stroke-width='4' fill='none'>" +
+          "<path d='M110 360 L200 300 L290 330 L380 210 L470 250'/>" +
+        "</g>" +
+      "</svg>";
+    el.src = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+  }
+</script>
 </head>
 <body>
-<header>
-  <h1>AEP + Target — WebSDK Validation Harness</h1>
-  <div class="cfg" id="cfg"></div>
+
+<!-- ================= NAV ================= -->
+<nav>
+  <div class="wrap bar">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 30 26" aria-hidden="true"><path fill="#EB1000" d="M19.05 0H30v26L19.05 0zM10.95 0H0v26L10.95 0zM15 9.6L21.97 26h-4.57l-2.08-5.25h-5.1L15 9.6z"/></svg>
+      Adobe Target
+    </a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#console">Live console</a>
+      <a href="#docs">Docs</a>
+    </div>
+    <div class="spacer"></div>
+    <div class="cta">
+      <button class="btn" onclick="location.href='#console'">Sign in</button>
+      <button class="btn primary" onclick="location.href='#console'">Request demo</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ================= HERO (personalization target) ================= -->
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">Adobe Experience Cloud</p>
+      <h1 id="hero-headline">Welcome, guest</h1>
+      <p id="hero-sub">Deliver the right experience to every customer, in real time — powered by AI-driven testing and personalization at Adobe scale.</p>
+      <div class="actions">
+        <button class="btn primary lg" onclick="location.href='#console'">Start personalizing</button>
+        <button class="btn lg ghost-light" onclick="location.href='#how'">See how it works</button>
+      </div>
+      <div id="index-el-16">Default offer slot — replaced when a Target activity matches.</div>
+    </div>
+    <div class="visual">
+      <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80" alt="Analytics dashboard" onerror="imgFallback(this,'hero')" />
+      <div class="float one"><span class="dot"></span>Audience matched</div>
+      <div class="float two"><span class="dot"></span>+38% conversion lift</div>
+    </div>
+  </div>
 </header>
 
-<main>
-  <!-- ====== PERSONALIZATION TARGET (VEC activities modify this) ====== -->
-  <section id="hero">
-    <h2 id="hero-headline">Welcome, guest</h2>
-    <p id="hero-sub">Default content — a Target activity should replace this.</p>
-    <div id="index-el-16">Imagine it. (default offer slot)</div>
-  </section>
+<!-- ================= TRUSTED ================= -->
+<div class="trusted">
+  <div class="wrap">
+    <span>Trusted by teams at</span>
+    <div class="names"><div>NORTHWIND</div><div>ACME</div><div>LUMEN</div><div>VERTEX</div><div>HELIOS</div></div>
+  </div>
+</div>
 
-  <!-- ====== IDENTITY + FETCH CONTROLS ====== -->
-  <section class="card">
-    <h2>Identity &amp; Fetch</h2>
-    <p style="color:var(--muted);font-size:12px;margin:0 0 6px;">
-      Matching is driven by the <b>ECID</b> — that's the identity the Target
-      <code>activationpull</code> projection is keyed by. Pin a member ECID to match.
-    </p>
-    <label>Pin ECID (the identity that matches — edit to test another)</label>
-    <input id="ecid" value="91867416263372490303060865060433145198"
-           placeholder="e.g. 91867416263372490303060865060433145198" />
-    <label>Email (optional — sent only as a data attribute, does NOT drive matching)</label>
-    <input id="email" value="" placeholder="optional, e.g. targetTest@example.com" />
-    <div class="btns">
-      <button class="primary" onclick="fetchByEcid()">Fetch — ECID</button>
-      <button onclick="fetchAnon()">Fetch anonymous (cookie ECID)</button>
-      <button onclick="showEcid()">Show ECID</button>
-      <button onclick="resetIdentity()">Reset identity</button>
+<!-- ================= FEATURES ================= -->
+<section class="pad" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Why Adobe Target</p>
+      <h2>Personalization that actually converts</h2>
+      <p>Test everything, target anyone, and let AI do the heavy lifting — all on one unified profile.</p>
     </div>
-    <div class="row" style="margin-top:12px;">
-      <span class="pill" id="ecidPill">ECID: —</span>
-      <span class="pill" id="decPill">decisions: —</span>
+    <div class="features">
+      <div class="feature">
+        <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=700&q=80" alt="A/B testing" onerror="imgFallback(this,'ab')" />
+        <div class="body">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+          </div>
+          <h3>A/B &amp; Multivariate testing</h3>
+          <p>Run experiments across web, mobile, and email — with automatic winner allocation.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=700&q=80" alt="AI personalization" onerror="imgFallback(this,'ai')" />
+        <div class="body">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+          </div>
+          <h3>AI-powered targeting</h3>
+          <p>Adobe Sensei matches each visitor to their best experience using real-time signals.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=700&q=80" alt="Unified profile" onerror="imgFallback(this,'profile')" />
+        <div class="body">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>One real-time profile</h3>
+          <p>Built on Adobe Experience Platform — every audience and identity, resolved at the edge.</p>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ====== DEBUG OUTPUT ====== -->
-  <section class="card">
-    <h2>Last response</h2>
-    <pre id="out">Pin a member ECID (e.g. 91867416263372490303060865060433145198), then click "Fetch — ECID".</pre>
-  </section>
-</main>
+<!-- ================= STATS ================= -->
+<div class="stats">
+  <div class="wrap">
+    <div><div class="n">10ms</div><div class="l">Edge decision latency</div></div>
+    <div><div class="n">300B+</div><div class="l">Experiences / day</div></div>
+    <div><div class="n">38%</div><div class="l">Avg. conversion lift</div></div>
+    <div><div class="n">99.9%</div><div class="l">Delivery uptime</div></div>
+  </div>
+</div>
+
+<!-- ================= HOW IT WORKS / SPLIT ================= -->
+<section class="pad" id="how">
+  <div class="wrap split">
+    <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80" alt="Team reviewing analytics" onerror="imgFallback(this,'team')" />
+    <div>
+      <h2>From audience to experience, in milliseconds</h2>
+      <p>Define an audience in Adobe Experience Platform, activate it to Target, and serve personalized content the moment a matching visitor arrives.</p>
+      <ul>
+        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Build audiences on the unified real-time profile</li>
+        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Activate to Target with edge-resolved identity</li>
+        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Deliver via the Web SDK with zero flicker</li>
+        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Measure lift with built-in analytics</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LIVE CONSOLE (validation harness) ================= -->
+<section class="pad console" id="console">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Live personalization console</p>
+      <h2>Try it against a real edge</h2>
+      <p>Pin a visitor identity and fetch a decision from the Adobe Experience Edge — the hero above updates in real time.</p>
+    </div>
+    <div class="cgrid">
+      <div class="card">
+        <h3>Identity &amp; Fetch</h3>
+        <p class="hint">Matching is driven by the <b>ECID</b> — the identity the Target <code>activationpull</code> projection is keyed by. Pin a member ECID to match.</p>
+
+        <label for="ecid">Pin ECID <span class="sub">(edit to test another visitor)</span></label>
+        <input id="ecid" value="91867416263372490303060865060433145198" placeholder="e.g. 91867416263372490303060865060433145198" />
+
+        <label for="email">Email <span class="sub">(optional — data attribute only, does not match)</span></label>
+        <input id="email" value="" placeholder="optional, e.g. targetTest@example.com" />
+
+        <div class="btns">
+          <button class="btn primary" onclick="fetchByEcid()">Fetch — ECID</button>
+          <button class="btn" onclick="fetchAnon()">Fetch anonymous</button>
+          <button class="btn" onclick="showEcid()">Show ECID</button>
+          <button class="btn" onclick="resetIdentity()">Reset identity</button>
+        </div>
+        <div class="pills">
+          <span class="pill" id="ecidPill">ECID: —</span>
+          <span class="pill" id="decPill">decisions: —</span>
+        </div>
+        <div class="env" id="cfg"></div>
+      </div>
+
+      <div class="card">
+        <h3>Edge response</h3>
+        <p class="hint">Raw WebSDK proposition payload returned from the edge.</p>
+        <pre id="out">Pin a member ECID (91867416263372490303060865060433145198) and click "Fetch — ECID".</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUOTE ================= -->
+<section class="pad quote">
+  <div class="wrap">
+    <blockquote>"We went from one-size-fits-all to genuinely 1:1 experiences — and watched conversion climb every quarter since."</blockquote>
+    <div class="who">Head of Digital Experience · Fortune 100 retailer</div>
+  </div>
+</section>
+
+<!-- ================= CTA BAND ================= -->
+<section class="pad cta-band" id="docs">
+  <div class="wrap">
+    <h2>Ready to personalize every moment?</h2>
+    <p>See Adobe Target in action with your own audiences.</p>
+    <button class="btn lg" onclick="location.href='#console'">Request a demo</button>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <div class="brand">
+          <svg viewBox="0 0 30 26" aria-hidden="true"><path fill="#EB1000" d="M19.05 0H30v26L19.05 0zM10.95 0H0v26L10.95 0zM15 9.6L21.97 26h-4.57l-2.08-5.25h-5.1L15 9.6z"/></svg>
+          Adobe Target
+        </div>
+        <p style="color:var(--g500);max-width:260px;">Part of Adobe Experience Cloud. Personalization and testing at enterprise scale.</p>
+      </div>
+      <div><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#console">Live console</a></div>
+      <div><h4>Resources</h4><a href="#docs">Documentation</a><a href="#docs">Web SDK</a><a href="#docs">API reference</a></div>
+      <div><h4>Company</h4><a href="#top">About</a><a href="#docs">Contact</a><a href="#docs">Support</a></div>
+    </div>
+    <div class="legal">
+      <div>© 2026 Adobe. All rights reserved. · Demo / validation harness — not an official Adobe site.</div>
+      <div>Privacy · Terms · Cookies</div>
+    </div>
+  </div>
+</footer>
 
 <!-- ============ Adobe WebSDK (standalone Alloy) ============ -->
 <script>
   // ---- EDIT THESE for your environment ----
   const DATASTREAM_ID = "80f974e4-ca8d-41f4-aef7-161317dec512";  // your datastream (configId)
   const ORG_ID        = "3E3EFB6D56570A277F000101@AdobeOrg";
-  const EDGE_DOMAIN   = "ags041.data.adobedc.net";  // matches your traces; remove to use Alloy default (edge.adobedc.net)
+  const EDGE_DOMAIN   = "ags041.data.adobedc.net";  // matches your traces; remove to use Alloy default
   const SURFACE       = "web://" + location.host + location.pathname;
   // -----------------------------------------
 
-  document.getElementById("cfg").textContent =
-    `datastream=${DATASTREAM_ID}  |  org=${ORG_ID}  |  surface=${SURFACE}`;
+  document.getElementById("cfg").textContent = "datastream " + DATASTREAM_ID;
 
   // Alloy base code
   !function(n,o){o.forEach(function(o){n[o]||((n.__alloyNS=n.__alloyNS||[]).push(o),
@@ -97,7 +413,7 @@
   alloy("configure", {
     datastreamId: DATASTREAM_ID,
     orgId: ORG_ID,
-    edgeDomain: EDGE_DOMAIN,   // comment out if it causes routing errors
+    edgeDomain: EDGE_DOMAIN,
     debugEnabled: true,
     defaultConsent: "in"
   });
@@ -107,8 +423,9 @@
 
   function summarize(r) {
     const props = r && r.propositions ? r.propositions : [];
-    document.getElementById("decPill").textContent = "decisions: " + props.length;
-    document.getElementById("decPill").className = "pill " + (props.length ? "ok" : "bad");
+    const decPill = document.getElementById("decPill");
+    decPill.textContent = "decisions: " + props.length;
+    decPill.className = "pill " + (props.length ? "ok" : "badv");
     log({ requestId: r && r.requestId, propositionsCount: props.length, propositions: props });
     showEcid();
   }
@@ -126,9 +443,7 @@
   }
 
   // ECID match — the ONLY identity that resolves the activationpull projection.
-  // Pin a materialized member ECID (e.g. 91867416...) to get a decision.
-  // The email, if entered, is sent ONLY as a data attribute (_ags041.customerEmail)
-  // and does NOT drive matching (Target has no email customerId in this datastream).
+  // The email, if entered, is sent ONLY as a data attribute and does NOT drive matching.
   function fetchByEcid() {
     const ecid  = document.getElementById("ecid").value.trim();
     const email = document.getElementById("email").value.trim();
@@ -150,7 +465,6 @@
   }
 
   function resetIdentity() {
-    // clear WebSDK cookies for this org so a fresh ECID is minted
     document.cookie.split(";").forEach(c => {
       const n = c.split("=")[0].trim();
       if (n.indexOf("kndctr_") === 0) document.cookie = n + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
@@ -158,9 +472,6 @@
     log("Identity cookies cleared. Reload the page for a fresh ECID.");
     document.getElementById("ecidPill").textContent = "ECID: —";
   }
-
-  // NO auto-fetch on load — that would auto-send an email and merge identities.
-  // Identify only when you click a button, with exactly one email per browser.
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@adobe/alloy@2/dist/alloy.min.js" async></script>
 </body>
