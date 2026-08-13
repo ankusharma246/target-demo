@@ -14,6 +14,7 @@
   main { max-width:1100px; margin:0 auto; padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
   .card h2 { margin:0 0 12px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  /* ---- The element Target activities will personalize ---- */
   #hero { grid-column:1 / -1; text-align:center; padding:40px 20px; border:1px dashed var(--line); border-radius:10px; background:linear-gradient(180deg,#161a22,#12151b); }
   #hero-headline { font-size:28px; margin:0 0 8px; }
   #hero-sub { color:var(--muted); margin:0; }
@@ -38,20 +39,30 @@
 </header>
 
 <main>
+  <!-- ====== PERSONALIZATION TARGET (VEC activities modify this) ====== -->
   <section id="hero">
     <h2 id="hero-headline">Welcome, guest</h2>
     <p id="hero-sub">Default content — a Target activity should replace this.</p>
     <div id="index-el-16">Imagine it. (default offer slot)</div>
   </section>
 
+  <!-- ====== IDENTITY + FETCH CONTROLS ====== -->
   <section class="card">
-    <h2>Identity and Fetch</h2>
-    <label for="email">Email (AEP identity, namespace <code>email</code>)</label>
-    <input id="email" value="test2@example.com" />
-    <label for="ecid">Pin ECID (optional — leave blank to use the cookie)</label>
+    <h2>Identity &amp; Fetch</h2>
+    <label>Email (AEP identity, namespace <code>email</code>)</label>
+    <input id="email" value="" placeholder="enter ONE email, e.g. targetTest@example.com" />
+    <label>Pin ECID (optional — leave blank to use the cookie)</label>
     <input id="ecid" placeholder="e.g. 91867416263372490303060865060433145198" />
+    <label for="authstate">Authenticated state</label>
+    <select id="authstate" style="width:100%;padding:9px 10px;background:#0f131a;border:1px solid var(--line);border-radius:7px;color:var(--fg);">
+      <option value="authenticated" selected>authenticated</option>
+      <option value="ambiguous">ambiguous</option>
+      <option value="loggedOut">loggedOut</option>
+    </select>
     <div class="btns">
-      <button class="primary" onclick="identifyAndFetch()">Identify + Fetch (render)</button>
+      <button class="primary" onclick="fetchByEmail()">Fetch — EMAIL match</button>
+      <button onclick="identifyAndFetch()">Fetch — email + ECID</button>
+      <button onclick="fetchByEcid()">Fetch — ECID only</button>
       <button onclick="fetchAnon()">Fetch anonymous</button>
       <button onclick="showEcid()">Show ECID</button>
       <button onclick="resetIdentity()">Reset identity</button>
@@ -62,21 +73,26 @@
     </div>
   </section>
 
+  <!-- ====== DEBUG OUTPUT ====== -->
   <section class="card">
     <h2>Last response</h2>
     <pre id="out">Load the page, then click "Identify + Fetch".</pre>
   </section>
 </main>
 
+<!-- ============ Adobe WebSDK (standalone Alloy) ============ -->
 <script>
-  const DATASTREAM_ID = "80f974e4-ca8d-41f4-aef7-161317dec512";
+  // ---- EDIT THESE for your environment ----
+  const DATASTREAM_ID = "80f974e4-ca8d-41f4-aef7-161317dec512";  // your datastream (configId)
   const ORG_ID        = "3E3EFB6D56570A277F000101@AdobeOrg";
-  const EDGE_DOMAIN   = "ags041.data.adobedc.net";
+  const EDGE_DOMAIN   = "ags041.data.adobedc.net";  // matches your traces; remove to use Alloy default (edge.adobedc.net)
   const SURFACE       = "web://" + location.host + location.pathname;
+  // -----------------------------------------
 
   document.getElementById("cfg").textContent =
-    "datastream=" + DATASTREAM_ID + "  |  org=" + ORG_ID + "  |  surface=" + SURFACE;
+    `datastream=${DATASTREAM_ID}  |  org=${ORG_ID}  |  surface=${SURFACE}`;
 
+  // Alloy base code
   !function(n,o){o.forEach(function(o){n[o]||((n.__alloyNS=n.__alloyNS||[]).push(o),
     n[o]=function(){var u=arguments;return new Promise(function(i,l){n[o].q.push([i,l,u])})},n[o].q=[])})}
     (window,["alloy"]);
@@ -84,7 +100,7 @@
   alloy("configure", {
     datastreamId: DATASTREAM_ID,
     orgId: ORG_ID,
-    edgeDomain: EDGE_DOMAIN,
+    edgeDomain: EDGE_DOMAIN,   // comment out if it causes routing errors
     debugEnabled: true,
     defaultConsent: "in"
   });
@@ -96,8 +112,9 @@
     const email = document.getElementById("email").value.trim();
     const ecid  = document.getElementById("ecid").value.trim();
     const map = {};
-    if (ecid)  map.ECID  = [{ id: ecid,  authenticatedState: "ambiguous",     primary: true  }];
-    if (email) map.email = [{ id: email, authenticatedState: "authenticated", primary: !ecid }];
+    const auth = document.getElementById("authstate").value;
+    if (ecid)  map.ECID  = [{ id: ecid,  authenticatedState: "ambiguous", primary: false }];
+    if (email) map.email = [{ id: email, authenticatedState: auth,        primary: true  }];
     return map;
   }
 
@@ -111,7 +128,7 @@
 
   function identifyAndFetch() {
     alloy("sendEvent", {
-      renderDecisions: true,
+      renderDecisions: true,   // auto-apply VEC/__view__ DOM changes to the page
       xdm: { eventType: "decisioning.propositionFetch", identityMap: idMap() },
       decisionScopes: ["__view__"],
       personalization: { surfaces: [SURFACE] }
@@ -119,12 +136,34 @@
   }
 
   function fetchAnon() {
+    runFetch({});
+  }
+
+  // Shared fetch — pass an explicit identityMap
+  function runFetch(identityMap) {
+    log("Sending with identityMap: " + JSON.stringify(identityMap));
     alloy("sendEvent", {
       renderDecisions: true,
-      xdm: { eventType: "decisioning.propositionFetch" },
+      xdm: { eventType: "decisioning.propositionFetch", identityMap },
       decisionScopes: ["__view__"],
       personalization: { surfaces: [SURFACE] }
     }).then(summarize).catch(e => log("ERROR: " + e));
+  }
+
+  // EMAIL match — send ONLY the email identity (as primary), so the edge resolves the
+  // profile/projection by email. No ECID sent, so no cold-ECID 404 for a known member.
+  function fetchByEmail() {
+    const email = document.getElementById("email").value.trim();
+    const auth  = document.getElementById("authstate").value;
+    if (!email) { log("Enter an email first."); return; }
+    runFetch({ email: [{ id: email, authenticatedState: auth, primary: true }] });
+  }
+
+  // ECID-only match
+  function fetchByEcid() {
+    const ecid = document.getElementById("ecid").value.trim();
+    if (!ecid) { log("Enter an ECID to pin first."); return; }
+    runFetch({ ECID: [{ id: ecid, authenticatedState: "ambiguous", primary: true }] });
   }
 
   function showEcid() {
@@ -135,6 +174,7 @@
   }
 
   function resetIdentity() {
+    // clear WebSDK cookies for this org so a fresh ECID is minted
     document.cookie.split(";").forEach(c => {
       const n = c.split("=")[0].trim();
       if (n.indexOf("kndctr_") === 0) document.cookie = n + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
@@ -143,7 +183,8 @@
     document.getElementById("ecidPill").textContent = "ECID: —";
   }
 
-  window.addEventListener("load", () => setTimeout(identifyAndFetch, 300));
+  // NO auto-fetch on load — that would auto-send an email and merge identities.
+  // Identify only when you click a button, with exactly one email per browser.
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@adobe/alloy@2/dist/alloy.min.js" async></script>
 </body>
