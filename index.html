@@ -139,24 +139,28 @@
     runFetch({});
   }
 
-  // Shared fetch — pass an explicit identityMap
-  function runFetch(identityMap) {
-    log("Sending with identityMap: " + JSON.stringify(identityMap));
+  // Shared fetch — pass an explicit identityMap and optional extra xdm (e.g. profile attributes)
+  function runFetch(identityMap, extraXdm) {
+    const xdm = Object.assign({ eventType: "decisioning.propositionFetch", identityMap }, extraXdm || {});
+    log("Sending xdm: " + JSON.stringify(xdm));
     alloy("sendEvent", {
       renderDecisions: true,
-      xdm: { eventType: "decisioning.propositionFetch", identityMap },
+      xdm,
       decisionScopes: ["__view__"],
       personalization: { surfaces: [SURFACE] }
     }).then(summarize).catch(e => log("ERROR: " + e));
   }
 
-  // EMAIL match — send ONLY the email identity (as primary), so the edge resolves the
-  // profile/projection by email. No ECID sent, so no cold-ECID 404 for a known member.
+  // EMAIL match — send ONLY the email identity (primary) so the edge resolves the profile by email,
+  // AND stamp _ags041.customerEmail = <email> so the profile qualifies a customerEmail-based audience.
   function fetchByEmail() {
     const email = document.getElementById("email").value.trim();
     const auth  = document.getElementById("authstate").value;
     if (!email) { log("Enter an email first."); return; }
-    runFetch({ email: [{ id: email, authenticatedState: auth, primary: true }] });
+    runFetch(
+      { email: [{ id: email, authenticatedState: auth, primary: true }] },
+      { _ags041: { customerEmail: email } }
+    );
   }
 
   // ECID-only match
